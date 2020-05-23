@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 from __future__ import absolute_import, division, print_function
 
-import sys
 import os
-from trakt import Trakt
+import pickle
+import sys
 from datetime import datetime, timedelta
 from threading import Condition
-import logging
-import pickle
+
 import requests
-from pprint import pprint
+from trakt import Trakt
+
 
 # logging.basicConfig(level=logging.DEBUG)
 
@@ -94,16 +94,16 @@ class watchedMonitor(object):
 
         return movies_watched_recently_imdbids
 
-    def radarr(self, recent_days, radarr_address, radarr_apikey):
+    def radarr(self, recent_days, radarr_address, radarr_apikey, watched_profile_id):
         print("Radarr:")
         movies_watched_recently_imdbids = self.trakt_get_movies(recent_days)
         print("")
 
         # Get all movies from radarr
-        response = requests.get("http://"+radarr_address+"/api/movie?apikey="+radarr_apikey)
+        response = requests.get("http://" + radarr_address + "/api/movie?apikey=" + radarr_apikey)
 
         # Look for recently watched movies in Radarr and change monitored to False
-        print(" Radarr: Movies found and changed monitored to False:")
+        print(" Radarr: Movies found and changed profile to watched:")
         movies = response.json()
         for id in movies_watched_recently_imdbids:
             for movie in movies:
@@ -116,9 +116,10 @@ class watchedMonitor(object):
                     print("  "+movie["title"])
                     radarr_id = movie["id"]
                     movie_json = movie
-                    movie_json["monitored"] = "False"
-                    request_uri ='http://'+radarr_address+'/api/movie?apikey='+radarr_apikey
+                    movie_json["profileId"] = watched_profile_id
+                    request_uri = 'http://' + radarr_address + '/api/movie?apikey=' + radarr_apikey
                     r = requests.put(request_uri, json=movie_json)
+                    print(r.text)
 
 
     def trakt_get_episodes(self, recent_days):
@@ -299,6 +300,7 @@ if __name__ == '__main__':
         radarr_address = cfg['radarr']['address'] 
         # radarr_port = cfg['radarr']['port']
         radarr_apikey = cfg['radarr']['apikey']
+        watched_profile_id = cfg['radarr']['watched_profile_id']
     except:
         radarr_use = False 
 
@@ -331,7 +333,7 @@ if __name__ == '__main__':
     app.initialize()
 
     if radarr_use:
-        app.radarr(recent_days, radarr_address, radarr_apikey)
+        app.radarr(recent_days, radarr_address, radarr_apikey, watched_profile_id)
 
     if sonarr_use:
         print("")
