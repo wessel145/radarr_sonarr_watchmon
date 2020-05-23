@@ -102,10 +102,16 @@ class watchedMonitor(object):
         # Get all movies from radarr
         response = requests.get("http://" + radarr_address + "/api/movie?apikey=" + radarr_apikey)
 
+        # get blacklist from file
+        blacklist = self.import_blacklist()
+
         # Look for recently watched movies in Radarr and change monitored to False
         print(" Radarr: Movies found and changed profile to watched:")
         movies = response.json()
         for id in movies_watched_recently_imdbids:
+            if id in blacklist:
+                print("\t" + id + " is in blacklist, skipping")
+                continue
             for movie in movies:
                 try:
                     radarr_imdb = movie["imdbId"]
@@ -113,23 +119,31 @@ class watchedMonitor(object):
                     pass
 
                 if id == radarr_imdb:
-                    print("  "+movie["title"])
+                    print("  " + movie["title"])
                     radarr_id = movie["id"]
                     movie_json = movie
                     movie_json["profileId"] = watched_profile_id
                     request_uri = 'http://' + radarr_address + '/api/movie?apikey=' + radarr_apikey
                     r = requests.put(request_uri, json=movie_json)
-                    print(r.text)
+                    # print(r.text)
 
+    def import_blacklist(self):
+        blacklist = []
+        file = open("blacklist.txt")
+        temp = file.read().splitlines()
+        for line in temp:
+            if not line.startswith("#"):
+                blacklist.append(line)
+        return blacklist
 
     def trakt_get_episodes(self, recent_days):
         with Trakt.configuration.oauth.from_response(self.authorization, refresh=True):
             # Expired token will be refreshed automatically (as `refresh=True`)
-            today = datetime.now()    
+            today = datetime.now()
             recent_date = today - timedelta(days=recent_days)
             show_episodes = dict()
 
-            print(" Trakt: Episodes watches in last "+str(recent_days)+" days:")
+            print(" Trakt: Episodes watches in last " + str(recent_days) + " days:")
             for episode in Trakt['sync/history'].shows(start_at=recent_date, pagination=True, extended='full'):
                 episode_dict = episode.to_dict()
                 ep_no = episode_dict['number']
