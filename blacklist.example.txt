@@ -1,4 +1,5 @@
 # This file allows you to blacklist some movies, e.g. movies you do not want to downgrade,
 # It uses the imdbID to do so, comments are ignored and therefore useful to identify a specific imdbID
+# YOU SHOULD RENAME THIS FILE TO BLACKLIST.TXT
 # Braveheart
 tt0112573
